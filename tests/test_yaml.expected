@@ -1,0 +1,9 @@
+test_encode_address: PASS
+test_encode_person: PASS
+test_decode_address: PASS
+test_decode_person: PASS
+test_roundtrip: PASS
+test_array_of_structs: PASS
+test_string_escaping: PASS
+
+All Yaml tests passed!

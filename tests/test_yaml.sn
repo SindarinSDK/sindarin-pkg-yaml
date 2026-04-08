@@ -1,0 +1,155 @@
+// Tests for Yaml encoder/decoder with @serializable structs
+import "../src/yaml"
+
+@serializable
+struct Address =>
+  street: str
+  city: str
+
+@serializable
+struct Person =>
+  name: str
+  age: int
+  score: double
+  active: bool
+  address: Address
+  tags: str[]
+
+@serializable
+struct Team =>
+  name: str
+  members: Person[]
+
+fn main(): void =>
+  // --- Test 1: Simple struct encode ---
+  var a: Address = Address {
+    street: "123 Main St",
+    city: "NYC"
+  }
+  var enc: Encoder = Yaml.encoder()
+  a.encode(enc)
+  var yaml: str = enc.result()
+  assert(yaml == "street: \"123 Main St\"\ncity: \"NYC\"", "Address encode")
+  println("test_encode_address: PASS")
+
+  // --- Test 2: Complex struct encode ---
+  var p: Person = Person {
+    name: "Alice",
+    age: 30,
+    score: 9.5,
+    active: true,
+    address: Address {
+      street: "456 Oak Ave",
+      city: "LA"
+    },
+    tags: {"dev", "lead"}
+  }
+  var enc2: Encoder = Yaml.encoder()
+  p.encode(enc2)
+  var yaml2: str = enc2.result()
+  assert(yaml2 == "name: \"Alice\"\nage: 30\nscore: 9.5\nactive: true\naddress:\n  street: \"456 Oak Ave\"\n  city: \"LA\"\ntags:\n  - \"dev\"\n  - \"lead\"", "Person encode")
+  println("test_encode_person: PASS")
+
+  // --- Test 3: Simple struct decode ---
+  var dec: Decoder = Yaml.decoder("street: \"789 Pine Rd\"\ncity: \"Chicago\"")
+  var a2: Address = Address.decode(dec)
+  assert(a2.street == "789 Pine Rd", "Address decode street")
+  assert(a2.city == "Chicago", "Address decode city")
+  println("test_decode_address: PASS")
+
+  // --- Test 4: Complex struct decode ---
+  var dec2: Decoder = Yaml.decoder("name: \"Bob\"\nage: 25\nscore: 8.3\nactive: false\naddress:\n  street: \"10 Elm\"\n  city: \"SF\"\ntags:\n  - \"ops\"\n  - \"sre\"")
+  var p2: Person = Person.decode(dec2)
+  assert(p2.name == "Bob", "Person decode name")
+  assert(p2.age == 25, "Person decode age")
+  assert(p2.score == 8.3, "Person decode score")
+  assert(p2.active == false, "Person decode active")
+  assert(p2.address.street == "10 Elm", "Person decode address.street")
+  assert(p2.address.city == "SF", "Person decode address.city")
+  assert(p2.tags.length == 2, "Person decode tags length")
+  assert(p2.tags[0] == "ops", "Person decode tags[0]")
+  assert(p2.tags[1] == "sre", "Person decode tags[1]")
+  println("test_decode_person: PASS")
+
+  // --- Test 5: Roundtrip ---
+  var original: Person = Person {
+    name: "Charlie",
+    age: 40,
+    score: 7.7,
+    active: true,
+    address: Address {
+      street: "99 River Dr",
+      city: "Boston"
+    },
+    tags: {"mgr"}
+  }
+  var rtEnc: Encoder = Yaml.encoder()
+  original.encode(rtEnc)
+  var rtYaml: str = rtEnc.result()
+  var roundtrip: Person = Person.decode(Yaml.decoder(rtYaml))
+  assert(roundtrip.name == "Charlie", "roundtrip name")
+  assert(roundtrip.age == 40, "roundtrip age")
+  assert(roundtrip.score == 7.7, "roundtrip score")
+  assert(roundtrip.active == true, "roundtrip active")
+  assert(roundtrip.address.street == "99 River Dr", "roundtrip address.street")
+  assert(roundtrip.address.city == "Boston", "roundtrip address.city")
+  assert(roundtrip.tags.length == 1, "roundtrip tags length")
+  assert(roundtrip.tags[0] == "mgr", "roundtrip tags[0]")
+  println("test_roundtrip: PASS")
+
+  // --- Test 6: Array of structs ---
+  var team: Team = Team {
+    name: "Engineering",
+    members: {
+      Person {
+        name: "Alice",
+        age: 30,
+        score: 9.0,
+        active: true,
+        address: Address {
+          street: "1 A",
+          city: "X"
+        },
+        tags: {"a"}
+      },
+      Person {
+        name: "Bob",
+        age: 25,
+        score: 8.0,
+        active: false,
+        address: Address {
+          street: "2 B",
+          city: "Y"
+        },
+        tags: {"b", "c"}
+      }
+    }
+  }
+  var tEnc: Encoder = Yaml.encoder()
+  team.encode(tEnc)
+  var tYaml: str = tEnc.result()
+  var team2: Team = Team.decode(Yaml.decoder(tYaml))
+  assert(team2.name == "Engineering", "team name")
+  assert(team2.members.length == 2, "team members count")
+  assert(team2.members[0].name == "Alice", "team member 0 name")
+  assert(team2.members[0].age == 30, "team member 0 age")
+  assert(team2.members[0].address.city == "X", "team member 0 city")
+  assert(team2.members[1].name == "Bob", "team member 1 name")
+  assert(team2.members[1].tags.length == 2, "team member 1 tags count")
+  assert(team2.members[1].tags[1] == "c", "team member 1 tags[1]")
+  println("test_array_of_structs: PASS")
+
+  // --- Test 7: String escaping ---
+  var esc: Address = Address {
+    street: "line1\nline2",
+    city: "O\"Brien"
+  }
+  var escEnc: Encoder = Yaml.encoder()
+  esc.encode(escEnc)
+  var escYaml: str = escEnc.result()
+  var esc2: Address = Address.decode(Yaml.decoder(escYaml))
+  assert(esc2.street == "line1\nline2", "escape roundtrip newline")
+  assert(esc2.city == "O\"Brien", "escape roundtrip quote")
+  println("test_string_escaping: PASS")
+
+  println("\nAll Yaml tests passed!")

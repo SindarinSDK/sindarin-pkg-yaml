@@ -1,0 +1,7 @@
+name: sindarin-pkg-yaml
+version: 1.0.0
+license: MIT
+dependencies:
+- name: sindarin-pkg-test
+  git: https://github.com/SindarinSDK/sindarin-pkg-test.git
+  branch: main

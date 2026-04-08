@@ -1,0 +1,57 @@
+# ==============================================================================
+# yaml/yaml.sn - YAML serialization via string manipulation
+# ==============================================================================
+# Zero-dependency YAML encoder/decoder for @serializable structs.
+# Uses direct string building (snprintf) — no libyaml, no intermediate tree.
+#
+# Emission rules:
+# - Strings: always double-quoted with JSON-style escaping
+# - Nested objects: newline + 2-space indent per nested level
+# - Nested arrays: newline + 2-space indent + "- " per item
+# - Empty object: "{}"
+# - Empty array: "[]"
+#
+# Usage:
+# import "yaml/yaml"
+#
+# @serializable
+# struct Person =>
+# name: str
+# age: int
+#
+# var p: Person = Person { name: "Alice", age: 30 }
+#
+# # Serialize
+# var enc: Encoder = Yaml.encoder()
+# p.encode(enc)
+# var yamlStr: str = enc.result()
+# println(yamlStr)   # name: "Alice"\nage: 30
+#
+# # Deserialize
+# var p2: Person = Person.decode(Yaml.decoder(yamlStr))
+# ==============================================================================
+
+@source "yaml.sn.c"
+
+struct Yaml =>
+
+  # Create a new YAML encoder (string builder, no library dependency)
+  static fn encoder(): Encoder =>
+    return sn_yaml_encoder()
+
+  # Create a new YAML array encoder (produces block sequence "- item" lines)
+  static fn arrayEncoder(): Encoder =>
+    return sn_yaml_array_encoder()
+
+  # Create a YAML decoder from a raw YAML string
+  static fn decoder(input: str): Decoder =>
+    return sn_yaml_decoder(input)
+
+  # Create a YAML decoder from a raw YAML array string (alias for decoder)
+  static fn arrayDecoder(input: str): Decoder =>
+    return sn_yaml_decoder(input)
+
+# Native factory functions
+native fn sn_yaml_encoder(): Encoder
+native fn sn_yaml_array_encoder(): Encoder
+native fn sn_yaml_decoder(input: str): Decoder
