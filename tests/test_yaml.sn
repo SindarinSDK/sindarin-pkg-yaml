@@ -26,9 +26,7 @@ fn main(): void =>
     street: "123 Main St",
     city: "NYC"
   }
-  var enc: Encoder = Yaml.encoder()
-  a.encode(enc)
-  var yaml: str = enc.result()
+  var yaml: str = a.encode(Yaml.encoder())
   assert(yaml == "street: \"123 Main St\"\ncity: \"NYC\"", "Address encode")
   println("test_encode_address: PASS")
 
@@ -44,9 +42,7 @@ fn main(): void =>
     },
     tags: {"dev", "lead"}
   }
-  var enc2: Encoder = Yaml.encoder()
-  p.encode(enc2)
-  var yaml2: str = enc2.result()
+  var yaml2: str = p.encode(Yaml.encoder())
   assert(yaml2 == "name: \"Alice\"\nage: 30\nscore: 9.5\nactive: true\naddress:\n  street: \"456 Oak Ave\"\n  city: \"LA\"\ntags:\n  - \"dev\"\n  - \"lead\"", "Person encode")
   println("test_encode_person: PASS")
 
@@ -83,9 +79,7 @@ fn main(): void =>
     },
     tags: {"mgr"}
   }
-  var rtEnc: Encoder = Yaml.encoder()
-  original.encode(rtEnc)
-  var rtYaml: str = rtEnc.result()
+  var rtYaml: str = original.encode(Yaml.encoder())
   var roundtrip: Person = Person.decode(Yaml.decoder(rtYaml))
   assert(roundtrip.name == "Charlie", "roundtrip name")
   assert(roundtrip.age == 40, "roundtrip age")
@@ -125,9 +119,7 @@ fn main(): void =>
       }
     }
   }
-  var tEnc: Encoder = Yaml.encoder()
-  team.encode(tEnc)
-  var tYaml: str = tEnc.result()
+  var tYaml: str = team.encode(Yaml.encoder())
   var team2: Team = Team.decode(Yaml.decoder(tYaml))
   assert(team2.name == "Engineering", "team name")
   assert(team2.members.length == 2, "team members count")
@@ -144,9 +136,7 @@ fn main(): void =>
     street: "line1\nline2",
     city: "O\"Brien"
   }
-  var escEnc: Encoder = Yaml.encoder()
-  esc.encode(escEnc)
-  var escYaml: str = escEnc.result()
+  var escYaml: str = esc.encode(Yaml.encoder())
   var esc2: Address = Address.decode(Yaml.decoder(escYaml))
   assert(esc2.street == "line1\nline2", "escape roundtrip newline")
   assert(esc2.city == "O\"Brien", "escape roundtrip quote")

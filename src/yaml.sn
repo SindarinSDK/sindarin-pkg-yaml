@@ -22,9 +22,7 @@
 # var p: Person = Person { name: "Alice", age: 30 }
 #
 # # Serialize
-# var enc: Encoder = Yaml.encoder()
-# p.encode(enc)
-# var yamlStr: str = enc.result()
+# var yamlStr: str = p.encode(Yaml.encoder())
 # println(yamlStr)   # name: "Alice"\nage: 30
 #
 # # Deserialize
