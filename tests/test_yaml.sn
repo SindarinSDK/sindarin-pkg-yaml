@@ -20,6 +20,20 @@ struct Team =>
   name: str
   members: Person[]
 
+@serializable
+struct EdgeRule =>
+  @alias "type"
+  kind: str
+  @alias "max_gap_ms"
+  maxGapMs: int
+  threshold: double
+
+@serializable
+struct RuleConfig =>
+  name: str
+  @alias "edge_rules"
+  edgeRules: EdgeRule[]
+
 fn main(): void =>
   // --- Test 1: Simple struct encode ---
   var a: Address = Address {
@@ -141,5 +155,83 @@ fn main(): void =>
   assert(esc2.street == "line1\nline2", "escape roundtrip newline")
   assert(esc2.city == "O\"Brien", "escape roundtrip quote")
   println("test_string_escaping: PASS")
+
+  // --- Test 8: @alias decode (single struct) ---
+  // Mirrors skynet EdgeRuleYaml: YAML uses "type" but field is "kind"
+  var aliasYaml: str = "type: \"temporal\"\nmax_gap_ms: 30000\nthreshold: 0.85"
+  var rule: EdgeRule = EdgeRule.decode(Yaml.decoder(aliasYaml))
+  assert(rule.kind == "temporal", "alias decode kind")
+  assert(rule.maxGapMs == 30000, "alias decode maxGapMs")
+  assert(rule.threshold == 0.85, "alias decode threshold")
+  println("test_alias_decode: PASS")
+
+  // --- Test 9: Array of @alias structs in parent with @alias field ---
+  // Mirrors skynet GraphEngineFileConfig with edge_rules: EdgeRuleYaml[]
+  var configYaml: str = "name: \"crusher\"\nedge_rules:\n  - type: \"temporal\"\n    max_gap_ms: 30000\n    threshold: 0.0\n  - type: \"similarity\"\n    max_gap_ms: 0\n    threshold: 0.85"
+  var cfg: RuleConfig = RuleConfig.decode(Yaml.decoder(configYaml))
+  assert(cfg.name == "crusher", "alias array config name")
+  assert(cfg.edgeRules.length == 2, "alias array length")
+  assert(cfg.edgeRules[0].kind == "temporal", "alias array [0].kind")
+  assert(cfg.edgeRules[0].maxGapMs == 30000, "alias array [0].maxGapMs")
+  assert(cfg.edgeRules[1].kind == "similarity", "alias array [1].kind")
+  assert(cfg.edgeRules[1].threshold == 0.85, "alias array [1].threshold")
+  println("test_alias_array_of_structs: PASS")
+
+  // --- Test 10: @alias roundtrip (encode then decode) ---
+  var original_cfg: RuleConfig = RuleConfig {
+    name: "roundtrip",
+    edgeRules: {
+      EdgeRule {
+        kind: "causal",
+        maxGapMs: 5000,
+        threshold: 0.4
+      },
+      EdgeRule {
+        kind: "sliding_window",
+        maxGapMs: 0,
+        threshold: 0.0
+      }
+    }
+  }
+  var rtCfgYaml: str = original_cfg.encode(Yaml.encoder())
+  var rt_cfg: RuleConfig = RuleConfig.decode(Yaml.decoder(rtCfgYaml))
+  assert(rt_cfg.name == "roundtrip", "alias roundtrip name")
+  assert(rt_cfg.edgeRules.length == 2, "alias roundtrip length")
+  assert(rt_cfg.edgeRules[0].kind == "causal", "alias roundtrip [0].kind")
+  assert(rt_cfg.edgeRules[0].maxGapMs == 5000, "alias roundtrip [0].maxGapMs")
+  assert(rt_cfg.edgeRules[1].kind == "sliding_window", "alias roundtrip [1].kind")
+  println("test_alias_roundtrip: PASS")
+
+  // --- Test 11: @alias with unquoted bare strings (real YAML config style) ---
+  // Skynet configs use unquoted values like "type: temporal" not "type: \"temporal\""
+  var bareYaml: str = "name: crusher\nedge_rules:\n  - type: temporal\n    max_gap_ms: 30000\n    threshold: 0.0\n  - type: similarity\n    max_gap_ms: 0\n    threshold: 0.85"
+  var bareCfg: RuleConfig = RuleConfig.decode(Yaml.decoder(bareYaml))
+  assert(bareCfg.name == "crusher", "bare alias config name")
+  assert(bareCfg.edgeRules.length == 2, "bare alias array length")
+  assert(bareCfg.edgeRules[0].kind == "temporal", "bare alias [0].kind")
+  assert(bareCfg.edgeRules[0].maxGapMs == 30000, "bare alias [0].maxGapMs")
+  assert(bareCfg.edgeRules[1].kind == "similarity", "bare alias [1].kind")
+  assert(bareCfg.edgeRules[1].threshold == 0.85, "bare alias [1].threshold")
+  println("test_alias_bare_strings: PASS")
+
+  // --- Test 12: Comments in YAML (the skynet bug) ---
+  // The graph-engine config has comments between array items.
+  // The parser must skip # comment lines to parse the array correctly.
+  var commentYaml: str = "name: crusher\nedge_rules:\n  # Connect sequential readings\n  - type: temporal\n    max_gap_ms: 30000\n    threshold: 0.0\n  # Cluster similar states\n  - type: similarity\n    max_gap_ms: 0\n    threshold: 0.85"
+  var commentCfg: RuleConfig = RuleConfig.decode(Yaml.decoder(commentYaml))
+  assert(commentCfg.name == "crusher", "comment config name")
+  assert(commentCfg.edgeRules.length == 2, $"comment array length: expected 2, got {commentCfg.edgeRules.length}")
+  assert(commentCfg.edgeRules[0].kind == "temporal", "comment [0].kind")
+  assert(commentCfg.edgeRules[0].maxGapMs == 30000, "comment [0].maxGapMs")
+  assert(commentCfg.edgeRules[1].kind == "similarity", "comment [1].kind")
+  assert(commentCfg.edgeRules[1].threshold == 0.85, "comment [1].threshold")
+  println("test_comments_in_yaml: PASS")
+
+  // --- Test 13: Inline comment after value ---
+  var inlineCommentYaml: str = "name: crusher  # this is the name\nage: 42  # the age"
+  var icPerson: Person = Person.decode(Yaml.decoder(inlineCommentYaml))
+  assert(icPerson.name == "crusher", "inline comment name")
+  assert(icPerson.age == 42, "inline comment age")
+  println("test_inline_comments: PASS")
 
   println("\nAll Yaml tests passed!")

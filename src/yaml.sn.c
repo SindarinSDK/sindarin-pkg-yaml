@@ -577,10 +577,14 @@ static int yaml_line_indent(const YamlCursor *cur) {
 }
 
 /* True if the cursor is positioned at the start of a line that is blank
- * (only whitespace before the newline or end). */
+ * (only whitespace before the newline or end) or a comment line (first
+ * non-whitespace character is '#'). YAML comments run from '#' to EOL
+ * and are semantically invisible — they must be skipped just like blank
+ * lines so they don't corrupt block structure detection. */
 static int yaml_line_is_blank(const YamlCursor *cur) {
     const char *q = cur->p;
     while (q < cur->end && *q != '\n') {
+        if (*q == '#') return 1; /* comment line — treat as blank */
         if (*q != ' ' && *q != '\t' && *q != '\r') return 0;
         q++;
     }
@@ -693,10 +697,28 @@ static YamlNode *yaml_parse_scalar(const char **p, const char *end) {
         return node;
     }
 
-    /* Capture the unquoted token up to end-of-line. */
+    /* Capture the unquoted token up to end-of-line or inline comment.
+     * YAML inline comments start with ' #' (space + hash) outside quotes.
+     * We scan for '#' preceded by a space to find the comment boundary. */
     const char *tok_start = *p;
-    while (*p < end && **p != '\n' && **p != '\r') (*p)++;
-    const char *tok_end = *p;
+    const char *comment_start = NULL;
+    {
+        const char *scan = *p;
+        while (scan < end && *scan != '\n' && *scan != '\r') {
+            if (*scan == '#' && scan > tok_start && scan[-1] == ' ') {
+                comment_start = scan;
+                break;
+            }
+            scan++;
+        }
+    }
+    if (comment_start) {
+        /* Advance cursor past the comment to end-of-line. */
+        while (*p < end && **p != '\n' && **p != '\r') (*p)++;
+    } else {
+        while (*p < end && **p != '\n' && **p != '\r') (*p)++;
+    }
+    const char *tok_end = comment_start ? comment_start : *p;
     /* Trim trailing spaces. */
     while (tok_end > tok_start && tok_end[-1] == ' ') tok_end--;
 

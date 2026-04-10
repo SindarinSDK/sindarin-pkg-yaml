@@ -5,5 +5,11 @@ test_decode_person: PASS
 test_roundtrip: PASS
 test_array_of_structs: PASS
 test_string_escaping: PASS
+test_alias_decode: PASS
+test_alias_array_of_structs: PASS
+test_alias_roundtrip: PASS
+test_alias_bare_strings: PASS
+test_comments_in_yaml: PASS
+test_inline_comments: PASS
 
 All Yaml tests passed!
