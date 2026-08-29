@@ -31,9 +31,7 @@ struct Person =>
 fn main(): void =>
     // Encode
     var p: Person = Person { name: "Alice", age: 30, active: true }
-    var enc: Encoder = Yaml.encoder()
-    p.encode(enc)
-    var yamlStr: str = enc.result()
+    var yamlStr: str = p.encode(Yaml.encoder())
     println(yamlStr)
     // name: "Alice"
     // age: 30
@@ -67,7 +65,7 @@ Yaml.encoder(): Encoder          # Create an object encoder (produces block-styl
 Yaml.arrayEncoder(): Encoder     # Create an array encoder (produces "- item" block sequence)
 ```
 
-The returned `Encoder` is passed to a struct's generated `.encode()` method. Call `.result()` on the encoder to get the final YAML string.
+Pass the returned `Encoder` to a struct's generated `.encode()` method. The method finalizes the encoder and returns the YAML string.
 
 ```sindarin
 @serializable
@@ -76,9 +74,7 @@ struct Address =>
     city: str
 
 var a: Address = Address { street: "123 Main St", city: "NYC" }
-var enc: Encoder = Yaml.encoder()
-a.encode(enc)
-var yaml: str = enc.result()
+var yaml: str = a.encode(Yaml.encoder())
 // street: "123 Main St"
 // city: "NYC"
 ```
@@ -154,9 +150,7 @@ var team: Team = Team {
     }
 }
 
-var enc: Encoder = Yaml.encoder()
-team.encode(enc)
-var yaml: str = enc.result()
+var yaml: str = team.encode(Yaml.encoder())
 
 // Roundtrip back to a struct
 var team2: Team = Team.decode(Yaml.decoder(yaml))
